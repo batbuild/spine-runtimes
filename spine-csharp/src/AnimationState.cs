@@ -167,13 +167,7 @@ namespace Spine {
 			return SetAnimation(trackIndex, animation, loop);
 		}
 
-		/// <summary>
-		/// Set the current animation. Any queued animations are cleared. 
-		/// </summary>
-		/// <param name="trackIndex"></param>
-		/// <param name="animation"></param>
-		/// <param name="loop"></param>
-		/// <returns></returns>
+		/** Set the current animation. Any queued animations are cleared. */
 		public TrackEntry SetAnimation (int trackIndex, Animation animation, bool loop) {
 			TrackEntry entry = new TrackEntry();
 			entry.animation = animation;
@@ -190,14 +184,8 @@ namespace Spine {
 			return AddAnimation(trackIndex, animation, loop, delay);
 		}
 
-		/// <summary>
-		/// Adds an animation to be played delay seconds after the current or last queued animation.
-		/// </summary>
-		/// <param name="trackIndex"></param>
-		/// <param name="animation"></param>
-		/// <param name="loop"></param>
-		/// <param name="delay"> May be <= 0 to use duration of previous animation minus any mix duration plus the negative delay.</param>
-		/// <returns></returns>
+		/** Adds an animation to be played delay seconds after the current or last queued animation.
+		 * @param delay May be <= 0 to use duration of previous animation minus any mix duration plus the negative delay. */
 		public TrackEntry AddAnimation (int trackIndex, Animation animation, bool loop, float delay) {
 			TrackEntry entry = new TrackEntry();
 			entry.animation = animation;
@@ -225,11 +213,7 @@ namespace Spine {
 			return entry;
 		}
 
-		/// <summary>
-		/// 
-		/// </summary>
-		/// <param name="trackIndex"></param>
-		/// <returns> Current track entry, may be Null</returns>
+		/** @return May be null. */
 		public TrackEntry GetCurrent (int trackIndex) {
 			if (trackIndex >= tracks.Count) return null;
 			return tracks[trackIndex];

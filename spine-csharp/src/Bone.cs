@@ -61,11 +61,7 @@ namespace Spine {
 		public float WorldScaleX { get { return worldScaleX; } }
 		public float WorldScaleY { get { return worldScaleY; } }
 
-		/// <summary>
-		/// 
-		/// </summary>
-		/// <param name="data"></param>
-		/// <param name="parent">May be null</param>
+		/** @param parent May be null. */
 		public Bone (BoneData data, Bone parent) {
 			if (data == null) throw new ArgumentNullException("data cannot be null.");
 			this.data = data;
@@ -73,11 +69,7 @@ namespace Spine {
 			SetToSetupPose();
 		}
 
-		/// <summary>
-		/// Computes the world SRT using the parent bone and the local SRT. 
-		/// </summary>
-		/// <param name="flipX"></param>
-		/// <param name="flipY"></param>
+		/** Computes the world SRT using the parent bone and the local SRT. */
 		public void UpdateWorldTransform (bool flipX, bool flipY) {
 			Bone parent = this.parent;
 			if (parent != null) {

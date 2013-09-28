@@ -52,21 +52,14 @@ namespace Spine {
 			this.duration = duration;
 		}
 
-		/// @deprecated  
-		[Obsolete]
+		/** @deprecated */
 		public void Apply (Skeleton skeleton, float time, bool loop) {
 			Apply(skeleton, time, time, loop, null);
 		}
-		
-		 
-		/// <summary>
-		/// Poses the skeleton at the specified time for this animation.
-		/// </summary>
-		/// <param name="skeleton"></param>
-		/// <param name="lastTime">The last time the animation was applied. Can be equal to time if events shouldn't be fired.</param>
-		/// <param name="time"></param>
-		/// <param name="loop"></param>
-		/// <param name="events">Any triggered events are added. May be null if lastTime is known to not cause any events to trigger.</param>
+
+		/** Poses the skeleton at the specified time for this animation.
+		 * @param lastTime The last time the animation was applied. Can be equal to time if events shouldn't be fired.
+		 * @param events Any triggered events are added. May be null if lastTime is known to not cause any events to trigger. */
 		public void Apply (Skeleton skeleton, float lastTime, float time, bool loop, List<Event> events) {
 			if (skeleton == null) throw new ArgumentNullException("skeleton cannot be null.");
 
@@ -80,27 +73,15 @@ namespace Spine {
 				timelines[i].Apply(skeleton, lastTime, time, events, 1);
 		}
 
-		/// <summary>
-		///		@deprecated
-		/// </summary>
-		/// <param name="skeleton"></param>
-		/// <param name="time"></param>
-		/// <param name="loop"></param>
-		/// <param name="alpha"></param>
-		[Obsolete]
+		/** @deprecated */
 		public void Mix (Skeleton skeleton, float time, bool loop, float alpha) {
 			Mix(skeleton, time, time, loop, null, alpha);
 		}
 
-		/// <summary>
-		/// Poses the skeleton at the specified time for this animation mixed with the current pose.
-		/// </summary>
-		/// <param name="skeleton"></param>
-		/// <param name="lastTime">The last time the animation was applied. Can be equal to time if events shouldn't be fired.</param>
-		/// <param name="time"></param>
-		/// <param name="loop"></param>
-		/// <param name="events">Any triggered events are added. May be null if lastTime is known to not cause any events to trigger.</param>
-		/// <param name="alpha">The amount of this animation that affects the current pose.</param>
+		/** Poses the skeleton at the specified time for this animation mixed with the current pose.
+		 * @param lastTime The last time the animation was applied. Can be equal to time if events shouldn't be fired.
+		 * @param events Any triggered events are added. May be null if lastTime is known to not cause any events to trigger.
+		 * @param alpha The amount of this animation that affects the current pose. */
 		public void Mix (Skeleton skeleton, float lastTime, float time, bool loop, List<Event> events, float alpha) {
 			if (skeleton == null) throw new ArgumentNullException("skeleton cannot be null.");
 
@@ -114,13 +95,7 @@ namespace Spine {
 				timelines[i].Apply(skeleton, lastTime, time, events, alpha);
 		}
 
-		/// <summary>
-		/// 
-		/// </summary>
-		/// <param name="values"></param>
-		/// <param name="target">After the first and before the last entry.</param>
-		/// <param name="step"></param>
-		/// <returns></returns>
+		/** @param target After the first and before the last entry. */
 		internal static int binarySearch (float[] values, float target, int step) {
 			int low = 0;
 			int high = values.Length / step - 2;
@@ -144,20 +119,11 @@ namespace Spine {
 	}
 
 	public interface Timeline {
-		/// <summary>
-		/// Sets the value(s) for the specified time.
-		/// </summary>
-		/// <param name="skeleton"></param>
-		/// <param name="lastTime"></param>
-		/// <param name="time"></param>
-		/// <param name="firedEvents"></param>
-		/// <param name="alpha"></param>
+		/** Sets the value(s) for the specified time. */
 		void Apply (Skeleton skeleton, float lastTime, float time, List<Event> firedEvents, float alpha);
 	}
 
-	/// <summary>
-	/// Base class for frames that use an interpolation bezier curve. 
-	/// </summary>
+	/** Base class for frames that use an interpolation bezier curve. */
 	abstract public class CurveTimeline : Timeline {
 		static protected float LINEAR = 0;
 		static protected float STEPPED = -1;
@@ -179,17 +145,10 @@ namespace Spine {
 		public void SetStepped (int frameIndex) {
 			curves[frameIndex * 6] = STEPPED;
 		}
-		
-		/// <summary>
-		/// Sets the control handle positions for an interpolation bezier curve used to transition from this keyframe to the next.
-		/// cx1 and cx2 are from 0 to 1, representing the percent of time between the two keyframes. cy1 and cy2 are the percent of
-		/// the difference between the keyframe's values.
-		/// </summary>
-		/// <param name="frameIndex"></param>
-		/// <param name="cx1"></param>
-		/// <param name="cy1"></param>
-		/// <param name="cx2"></param>
-		/// <param name="cy2"></param>
+
+		/** Sets the control handle positions for an interpolation bezier curve used to transition from this keyframe to the next.
+	 * cx1 and cx2 are from 0 to 1, representing the percent of time between the two keyframes. cy1 and cy2 are the percent of
+	 * the difference between the keyframe's values. */
 		public void SetCurve (int frameIndex, float cx1, float cy1, float cx2, float cy2) {
 			float subdiv_step = 1f / BEZIER_SEGMENTS;
 			float subdiv_step2 = subdiv_step * subdiv_step;
@@ -259,12 +218,7 @@ namespace Spine {
 			frames = new float[frameCount * 2];
 		}
 
-		/// <summary>
-		///  Sets the time and value of the specified keyframe. 
-		/// </summary>
-		/// <param name="frameIndex"></param>
-		/// <param name="time"></param>
-		/// <param name="angle"></param>
+		/** Sets the time and value of the specified keyframe. */
 		public void SetFrame (int frameIndex, float time, float angle) {
 			frameIndex *= 2;
 			frames[frameIndex] = time;
@@ -326,13 +280,7 @@ namespace Spine {
 			frames = new float[frameCount * 3];
 		}
 
-		/// <summary>
-		/// Sets the time and value of the specified keyframe.
-		/// </summary>
-		/// <param name="frameIndex"></param>
-		/// <param name="time"></param>
-		/// <param name="x"></param>
-		/// <param name="y"></param>
+		/** Sets the time and value of the specified keyframe. */
 		public void SetFrame (int frameIndex, float time, float x, float y) {
 			frameIndex *= 3;
 			frames[frameIndex] = time;
@@ -412,15 +360,7 @@ namespace Spine {
 			frames = new float[frameCount * 5];
 		}
 
-		/// <summary>
-		/// Sets the time and value of the specified keyframe. 
-		/// </summary>
-		/// <param name="frameIndex"></param>
-		/// <param name="time"></param>
-		/// <param name="r"></param>
-		/// <param name="g"></param>
-		/// <param name="b"></param>
-		/// <param name="a"></param>
+		/** Sets the time and value of the specified keyframe. */
 		public void setFrame (int frameIndex, float time, float r, float g, float b, float a) {
 			frameIndex *= 5;
 			frames[frameIndex] = time;
@@ -488,12 +428,7 @@ namespace Spine {
 			attachmentNames = new String[frameCount];
 		}
 
-		/// <summary>
-		/// Sets the time and value of the specified keyframe. 
-		/// </summary>
-		/// <param name="frameIndex"></param>
-		/// <param name="time"></param>
-		/// <param name="attachmentName"></param>
+		/** Sets the time and value of the specified keyframe. */
 		public void setFrame (int frameIndex, float time, String attachmentName) {
 			frames[frameIndex] = time;
 			attachmentNames[frameIndex] = attachmentName;
@@ -528,12 +463,7 @@ namespace Spine {
 			events = new Event[frameCount];
 		}
 
-		/// <summary>
-		///  Sets the time and value of the specified keyframe. 
-		/// </summary>
-		/// <param name="frameIndex"></param>
-		/// <param name="time"></param>
-		/// <param name="e"></param>
+		/** Sets the time and value of the specified keyframe. */
 		public void setFrame (int frameIndex, float time, Event e) {
 			frames[frameIndex] = time;
 			events[frameIndex] = e;
@@ -583,12 +513,8 @@ namespace Spine {
 			drawOrders = new int[frameCount][];
 		}
 
-		/// <summary>
-		/// Sets the time and value of the specified keyframe.
-		/// </summary>
-		/// <param name="frameIndex"></param>
-		/// <param name="time"></param>
-		/// <param name="drawOrder">May be null to use bind pose draw order.</param>
+		/** Sets the time and value of the specified keyframe.
+		 * @param drawOrder May be null to use bind pose draw order. */
 		public void setFrame (int frameIndex, float time, int[] drawOrder) {
 			frames[frameIndex] = time;
 			drawOrders[frameIndex] = drawOrder;

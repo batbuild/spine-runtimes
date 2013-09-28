@@ -35,13 +35,7 @@ using System;
 
 namespace Spine {
 	public interface AttachmentLoader {
-		/// <summary>
-		///  May be null to not load any attachment.
-		/// </summary>
-		/// <param name="skin"></param>
-		/// <param name="type"></param>
-		/// <param name="name"></param>
-		/// <returns></returns>
+		/** @return May be null to not load any attachment. */
 		Attachment NewAttachment (Skin skin, AttachmentType type, String name);
 	}
 }

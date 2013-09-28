@@ -40,9 +40,7 @@ namespace Spine {
 		internal float length, x, y, rotation, scaleX = 1, scaleY = 1;
 		internal bool inheritScale, inheritRotation;
 
-		/// <summary>
-		/// May be null.
-		/// </summary>
+		/** May be null. */
 		public BoneData Parent { get { return parent; } }
 		public String Name { get { return name; } }
 		public float Length { get { return length; } set { length = value; } }
@@ -54,11 +52,7 @@ namespace Spine {
 		public bool InheritScale { get { return inheritScale; } set { inheritScale = value; } }
 		public bool InheritRotation { get { return inheritRotation; } set { inheritRotation = value; } }
 
-		/// <summary>
-		/// 
-		/// </summary>
-		/// <param name="name"></param>
-		/// <param name="parent"> May be null. </param>
+		/** @param parent May be null. */
 		public BoneData (String name, BoneData parent) {
 			if (name == null) throw new ArgumentNullException("name cannot be null.");
 			this.name = name;

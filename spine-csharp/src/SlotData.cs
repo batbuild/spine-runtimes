@@ -47,9 +47,7 @@ namespace Spine {
 		public float G { get { return g; } set { g = value; } }
 		public float B { get { return b; } set { b = value; } }
 		public float A { get { return a; } set { a = value; } }
-		/// <summary>
-		///  May be null. 
-		/// </summary>
+		/** @param attachmentName May be null. */
 		public String AttachmentName { get { return attachmentName; } set { attachmentName = value; } }
 		public bool AdditiveBlending { get { return additiveBlending; } set { additiveBlending = value; } }
 

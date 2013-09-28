@@ -50,9 +50,7 @@ namespace Spine {
 		public float B { get { return b; } set { b = value; } }
 		public float A { get { return a; } set { a = value; } }
 
-		/// <summary>
-		///  May be null. 
-		/// </summary>
+		/** May be null. */
 		public Attachment Attachment {
 			get {
 				return attachment;
