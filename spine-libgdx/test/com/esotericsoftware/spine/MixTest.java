@@ -1,34 +1,31 @@
 /******************************************************************************
- * Spine Runtime Software License - Version 1.0
+ * Spine Runtimes Software License
+ * Version 2.1
  * 
  * Copyright (c) 2013, Esoteric Software
  * All rights reserved.
  * 
- * Redistribution and use in source and binary forms in whole or in part, with
- * or without modification, are permitted provided that the following conditions
- * are met:
+ * You are granted a perpetual, non-exclusive, non-sublicensable and
+ * non-transferable license to install, execute and perform the Spine Runtimes
+ * Software (the "Software") solely for internal use. Without the written
+ * permission of Esoteric Software (typically granted by licensing Spine), you
+ * may not (a) modify, translate, adapt or otherwise create derivative works,
+ * improvements of the Software or develop new applications using the Software
+ * or (b) remove, delete, alter or obscure any trademarks or any copyright,
+ * trademark, patent or other intellectual property or proprietary rights
+ * notices on or in the Software, including any copy thereof. Redistributions
+ * in binary or source form must include this license and terms.
  * 
- * 1. A Spine Single User License or Spine Professional License must be
- *    purchased from Esoteric Software and the license must remain valid:
- *    http://esotericsoftware.com/
- * 2. Redistributions of source code must retain this license, which is the
- *    above copyright notice, this declaration of conditions and the following
- *    disclaimer.
- * 3. Redistributions in binary form must reproduce this license, which is the
- *    above copyright notice, this declaration of conditions and the following
- *    disclaimer, in the documentation and/or other materials provided with the
- *    distribution.
- * 
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
- * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
- * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * THIS SOFTWARE IS PROVIDED BY ESOTERIC SOFTWARE "AS IS" AND ANY EXPRESS OR
+ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO
+ * EVENT SHALL ESOTERIC SOFTARE BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+ * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
 package com.esotericsoftware.spine;
@@ -36,13 +33,16 @@ package com.esotericsoftware.spine;
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.backends.lwjgl.LwjglApplication;
-import com.badlogic.gdx.graphics.GL10;
+import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
+import com.badlogic.gdx.utils.Array;
 
 public class MixTest extends ApplicationAdapter {
 	SpriteBatch batch;
 	float time;
+	Array<Event> events = new Array();
+
 	SkeletonRenderer renderer;
 	SkeletonRendererDebug debugRenderer;
 
@@ -54,19 +54,20 @@ public class MixTest extends ApplicationAdapter {
 	public void create () {
 		batch = new SpriteBatch();
 		renderer = new SkeletonRenderer();
+		renderer.setPremultipliedAlpha(true);
 		debugRenderer = new SkeletonRendererDebug();
 
-		final String name = "spineboy";
+		final String name = "spineboy/spineboy";
 
 		TextureAtlas atlas = new TextureAtlas(Gdx.files.internal(name + ".atlas"));
 
 		if (true) {
 			SkeletonJson json = new SkeletonJson(atlas);
-			// json.setScale(2);
+			json.setScale(0.6f);
 			skeletonData = json.readSkeletonData(Gdx.files.internal(name + ".json"));
 		} else {
 			SkeletonBinary binary = new SkeletonBinary(atlas);
-			// binary.setScale(2);
+			binary.setScale(0.6f);
 			skeletonData = binary.readSkeletonData(Gdx.files.internal(name + ".skel"));
 		}
 		walkAnimation = skeletonData.findAnimation("walk");
@@ -74,8 +75,7 @@ public class MixTest extends ApplicationAdapter {
 
 		skeleton = new Skeleton(skeletonData);
 		skeleton.updateWorldTransform();
-		skeleton.setX(-50);
-		skeleton.setY(20);
+		skeleton.setPosition(-50, 20);
 	}
 
 	public void render () {
@@ -83,8 +83,8 @@ public class MixTest extends ApplicationAdapter {
 
 		float jump = jumpAnimation.getDuration();
 		float beforeJump = 1f;
-		float blendIn = 0.4f;
-		float blendOut = 0.4f;
+		float blendIn = 0.2f;
+		float blendOut = 0.2f;
 		float blendOutStart = beforeJump + jump - blendOut;
 		float total = 3.75f;
 
@@ -94,30 +94,30 @@ public class MixTest extends ApplicationAdapter {
 		if (time > beforeJump + blendIn && time < blendOutStart) speed = 360;
 		skeleton.setX(skeleton.getX() + speed * delta);
 
-		Gdx.gl.glClear(GL10.GL_COLOR_BUFFER_BIT);
+		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
-		// This shows how to manage state manually. See AnimationStatesTest.
+		// This shows how to manage state manually. See SimpleTest1 for a higher level API using AnimationState.
 		if (time > total) {
 			// restart
 			time = 0;
 			skeleton.setX(-50);
 		} else if (time > beforeJump + jump) {
 			// just walk after jump
-			walkAnimation.apply(skeleton, time, true);
+			walkAnimation.apply(skeleton, time, time, true, events);
 		} else if (time > blendOutStart) {
 			// blend out jump
-			walkAnimation.apply(skeleton, time, true);
-			jumpAnimation.mix(skeleton, time - beforeJump, false, 1 - (time - blendOutStart) / blendOut);
+			walkAnimation.apply(skeleton, time, time, true, events);
+			jumpAnimation.mix(skeleton, time - beforeJump, time - beforeJump, false, events, 1 - (time - blendOutStart) / blendOut);
 		} else if (time > beforeJump + blendIn) {
 			// just jump
-			jumpAnimation.apply(skeleton, time - beforeJump, false);
+			jumpAnimation.apply(skeleton, time - beforeJump, time - beforeJump, false, events);
 		} else if (time > beforeJump) {
 			// blend in jump
-			walkAnimation.apply(skeleton, time, true);
-			jumpAnimation.mix(skeleton, time - beforeJump, false, (time - beforeJump) / blendIn);
+			walkAnimation.apply(skeleton, time, time, true, events);
+			jumpAnimation.mix(skeleton, time - beforeJump, time - beforeJump, false, events, (time - beforeJump) / blendIn);
 		} else {
 			// just walk before jump
-			walkAnimation.apply(skeleton, time, true);
+			walkAnimation.apply(skeleton, time, time, true, events);
 		}
 
 		skeleton.updateWorldTransform();

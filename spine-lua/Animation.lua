@@ -1,35 +1,32 @@
-------------------------------------------------------------------------------
- -- Spine Runtime Software License - Version 1.0
- -- 
- -- Copyright (c) 2013, Esoteric Software
- -- All rights reserved.
- -- 
- -- Redistribution and use in source and binary forms in whole or in part, with
- -- or without modification, are permitted provided that the following conditions
- -- are met:
- -- 
- -- 1. A Spine Single User License or Spine Professional License must be
- --    purchased from Esoteric Software and the license must remain valid:
- --    http://esotericsoftware.com/
- -- 2. Redistributions of source code must retain this license, which is the
- --    above copyright notice, this declaration of conditions and the following
- --    disclaimer.
- -- 3. Redistributions in binary form must reproduce this license, which is the
- --    above copyright notice, this declaration of conditions and the following
- --    disclaimer, in the documentation and/or other materials provided with the
- --    distribution.
- -- 
- -- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
- -- ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- -- WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- -- DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
- -- ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- -- (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- -- LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
- -- ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- -- (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- -- SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- ------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+-- Spine Runtimes Software License
+-- Version 2.1
+-- 
+-- Copyright (c) 2013, Esoteric Software
+-- All rights reserved.
+-- 
+-- You are granted a perpetual, non-exclusive, non-sublicensable and
+-- non-transferable license to install, execute and perform the Spine Runtimes
+-- Software (the "Software") solely for internal use. Without the written
+-- permission of Esoteric Software (typically granted by licensing Spine), you
+-- may not (a) modify, translate, adapt or otherwise create derivative works,
+-- improvements of the Software or develop new applications using the Software
+-- or (b) remove, delete, alter or obscure any trademarks or any copyright,
+-- trademark, patent or other intellectual property or proprietary rights
+-- notices on or in the Software, including any copy thereof. Redistributions
+-- in binary or source form must include this license and terms.
+-- 
+-- THIS SOFTWARE IS PROVIDED BY ESOTERIC SOFTWARE "AS IS" AND ANY EXPRESS OR
+-- IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+-- MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO
+-- EVENT SHALL ESOTERIC SOFTARE BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+-- SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+-- PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+-- OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+-- WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+-- OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+-- ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+-------------------------------------------------------------------------------
 
 local Animation = {}
 function Animation.new (name, timelines, duration)
@@ -41,23 +38,29 @@ function Animation.new (name, timelines, duration)
 		duration = duration
 	}
 
-	function self:apply (skeleton, time, loop)
+	function self:apply (skeleton, lastTime, time, loop, events)
 		if not skeleton then error("skeleton cannot be nil.", 2) end
 
-		if loop and duration > 0 then time = time % duration end
+		if loop and duration > 0 then
+			time = time % self.duration
+			lastTime = lastTime % self.duration
+		end
 
 		for i,timeline in ipairs(self.timelines) do
-			timeline:apply(skeleton, time, 1)
+			timeline:apply(skeleton, lastTime, time, events, 1)
 		end
 	end
 
-	function self:mix (skeleton, time, loop, alpha)
+	function self:mix (skeleton, lastTime, time, loop, events, alpha)
 		if not skeleton then error("skeleton cannot be nil.", 2) end
 
-		if loop and duration > 0 then time = time % duration end
+		if loop and duration > 0 then
+			time = time % self.duration
+			lastTime = lastTime % self.duration
+		end
 
 		for i,timeline in ipairs(self.timelines) do
-			timeline:apply(skeleton, time, alpha)
+			timeline:apply(skeleton, lastTime, time, events, alpha)
 		end
 	end
 
@@ -97,15 +100,15 @@ function Animation.CurveTimeline.new ()
 		curves = {}
 	}
 
-	function self:setLinear (keyframeIndex)
-		self.curves[keyframeIndex * 6] = LINEAR
+	function self:setLinear (frameIndex)
+		self.curves[frameIndex * 6] = LINEAR
 	end
 
-	function self:setStepped (keyframeIndex)
-		self.curves[keyframeIndex * 6] = STEPPED
+	function self:setStepped (frameIndex)
+		self.curves[frameIndex * 6] = STEPPED
 	end
 
-	function self:setCurve (keyframeIndex, cx1, cy1, cx2, cy2)
+	function self:setCurve (frameIndex, cx1, cy1, cx2, cy2)
 		local subdiv_step = 1 / BEZIER_SEGMENTS
 		local subdiv_step2 = subdiv_step * subdiv_step
 		local subdiv_step3 = subdiv_step2 * subdiv_step
@@ -117,7 +120,7 @@ function Animation.CurveTimeline.new ()
 		local tmp1y = -cy1 * 2 + cy2
 		local tmp2x = (cx1 - cx2) * 3 + 1
 		local tmp2y = (cy1 - cy2) * 3 + 1
-		local i = keyframeIndex * 6
+		local i = frameIndex * 6
 		local curves = self.curves
 		curves[i] = cx1 * pre1 + tmp1x * pre2 + tmp2x * subdiv_step3
 		curves[i + 1] = cy1 * pre1 + tmp1y * pre2 + tmp2y * subdiv_step3
@@ -127,8 +130,8 @@ function Animation.CurveTimeline.new ()
 		curves[i + 5] = tmp2y * pre5
 	end
 
-	function self:getCurvePercent (keyframeIndex, percent)
-		local curveIndex = keyframeIndex * 6
+	function self:getCurvePercent (frameIndex, percent)
+		local curveIndex = frameIndex * 6
 		local curves = self.curves
 		local dfx = curves[curveIndex]
 		if not dfx then return percent end -- linear
@@ -175,17 +178,17 @@ function Animation.RotateTimeline.new ()
 		return self.frames[#self.frames - 1]
 	end
 
-	function self:getKeyframeCount ()
+	function self:getFrameCount ()
 		return (#self.frames + 1) / 2
 	end
 
-	function self:setKeyframe (keyframeIndex, time, value)
-		keyframeIndex = keyframeIndex * 2
-		self.frames[keyframeIndex] = time
-		self.frames[keyframeIndex + 1] = value
+	function self:setFrame (frameIndex, time, value)
+		frameIndex = frameIndex * 2
+		self.frames[frameIndex] = time
+		self.frames[frameIndex + 1] = value
 	end
 
-	function self:apply (skeleton, time, alpha)
+	function self:apply (skeleton, lastTime, time, firedEvents, alpha)
 		local frames = self.frames
 		if time < frames[0] then return end -- Time is before first frame.
 
@@ -245,18 +248,18 @@ function Animation.TranslateTimeline.new ()
 		return self.frames[#self.frames - 2]
 	end
 
-	function self:getKeyframeCount ()
+	function self:getFrameCount ()
 		return (#self.frames + 1) / 3
 	end
 
-	function self:setKeyframe (keyframeIndex, time, x, y)
-		keyframeIndex = keyframeIndex * 3
-		self.frames[keyframeIndex] = time
-		self.frames[keyframeIndex + 1] = x
-		self.frames[keyframeIndex + 2] = y
+	function self:setFrame (frameIndex, time, x, y)
+		frameIndex = frameIndex * 3
+		self.frames[frameIndex] = time
+		self.frames[frameIndex + 1] = x
+		self.frames[frameIndex + 2] = y
 	end
 
-	function self:apply (skeleton, time, alpha)
+	function self:apply (skeleton, lastTime, time, firedEvents, alpha)
 		local frames = self.frames
 		if time < frames[0] then return end -- Time is before first frame.
 
@@ -292,7 +295,7 @@ function Animation.ScaleTimeline.new ()
 
 	local self = Animation.TranslateTimeline.new()
 
-	function self:apply (skeleton, time, alpha)
+	function self:apply (skeleton, lastTime, time, firedEvents, alpha)
 		local frames = self.frames
 		if time < frames[0] then return end -- Time is before first frame.
 
@@ -336,49 +339,47 @@ function Animation.ColorTimeline.new ()
 		return self.frames[#self.frames - 4]
 	end
 
-	function self:getKeyframeCount ()
+	function self:getFrameCount ()
 		return (#self.frames + 1) / 5
 	end
 
-	function self:setKeyframe (keyframeIndex, time, r, g, b, a)
-		keyframeIndex = keyframeIndex * 5
-		self.frames[keyframeIndex] = time
-		self.frames[keyframeIndex + 1] = r
-		self.frames[keyframeIndex + 2] = g
-		self.frames[keyframeIndex + 3] = b
-		self.frames[keyframeIndex + 4] = a
+	function self:setFrame (frameIndex, time, r, g, b, a)
+		frameIndex = frameIndex * 5
+		self.frames[frameIndex] = time
+		self.frames[frameIndex + 1] = r
+		self.frames[frameIndex + 2] = g
+		self.frames[frameIndex + 3] = b
+		self.frames[frameIndex + 4] = a
 	end
 
-	function self:apply (skeleton, time, alpha)
+	function self:apply (skeleton, lastTime, time, firedEvents, alpha)
 		local frames = self.frames
 		if time < frames[0] then return end -- Time is before first frame.
 
-		local slot = skeleton.slots[self.slotIndex]
-
+		local r, g, b, a
 		if time >= frames[#frames - 4] then -- Time is after last frame.
-			local r = frames[#frames - 3]
-			local g = frames[#frames - 2]
-			local b = frames[#frames - 1]
-			local a = frames[#frames]
-			slot:setColor(r, g, b, a)
-			return
+			r = frames[#frames - 3]
+			g = frames[#frames - 2]
+			b = frames[#frames - 1]
+			a = frames[#frames]
+		else
+			-- Interpolate between the last frame and the current frame.
+			local frameIndex = binarySearch(frames, time, 5)
+			local lastFrameR = frames[frameIndex - 4]
+			local lastFrameG = frames[frameIndex - 3]
+			local lastFrameB = frames[frameIndex - 2]
+			local lastFrameA = frames[frameIndex - 1]
+			local frameTime = frames[frameIndex]
+			local percent = 1 - (time - frameTime) / (frames[frameIndex + LAST_FRAME_TIME] - frameTime)
+			if percent < 0 then percent = 0 elseif percent > 255 then percent = 255 end
+			percent = self:getCurvePercent(frameIndex / 5 - 1, percent)
+
+			r = lastFrameR + (frames[frameIndex + FRAME_R] - lastFrameR) * percent
+			g = lastFrameG + (frames[frameIndex + FRAME_G] - lastFrameG) * percent
+			b = lastFrameB + (frames[frameIndex + FRAME_B] - lastFrameB) * percent
+			a = lastFrameA + (frames[frameIndex + FRAME_A] - lastFrameA) * percent
 		end
-
-		-- Interpolate between the last frame and the current frame.
-		local frameIndex = binarySearch(frames, time, 5)
-		local lastFrameR = frames[frameIndex - 4]
-		local lastFrameG = frames[frameIndex - 3]
-		local lastFrameB = frames[frameIndex - 2]
-		local lastFrameA = frames[frameIndex - 1]
-		local frameTime = frames[frameIndex]
-		local percent = 1 - (time - frameTime) / (frames[frameIndex + LAST_FRAME_TIME] - frameTime)
-		if percent < 0 then percent = 0 elseif percent > 255 then percent = 255 end
-		percent = self:getCurvePercent(frameIndex / 5 - 1, percent)
-
-		local r = lastFrameR + (frames[frameIndex + FRAME_R] - lastFrameR) * percent
-		local g = lastFrameG + (frames[frameIndex + FRAME_G] - lastFrameG) * percent
-		local b = lastFrameB + (frames[frameIndex + FRAME_B] - lastFrameB) * percent
-		local a = lastFrameA + (frames[frameIndex + FRAME_A] - lastFrameA) * percent
+		local slot = skeleton.slots[self.slotIndex]
 		if alpha < 1 then
 			slot:setColor(slot.r + (r - slot.r) * alpha, slot.g + (g - slot.g) * alpha, slot.b + (b - slot.b) * alpha, slot.a + (a - slot.a) * alpha)
 		else
@@ -391,25 +392,26 @@ end
 
 Animation.AttachmentTimeline = {}
 function Animation.AttachmentTimeline.new ()
-	local self = Animation.CurveTimeline.new()
-	self.frames = {}
-	self.attachmentNames = {}
-	self.slotName = nil
+	local self = {
+		frames = {},
+		attachmentNames = {},
+		slotName = nil
+	}
 
 	function self:getDuration ()
 		return self.frames[#self.frames]
 	end
 
-	function self:getKeyframeCount ()
+	function self:getFrameCount ()
 		return #self.frames + 1
 	end
 
-	function self:setKeyframe (keyframeIndex, time, attachmentName)
-		self.frames[keyframeIndex] = time
-		self.attachmentNames[keyframeIndex] = attachmentName
+	function self:setFrame (frameIndex, time, attachmentName)
+		self.frames[frameIndex] = time
+		self.attachmentNames[frameIndex] = attachmentName
 	end
 
-	function self:apply (skeleton, time, alpha)
+	function self:apply (skeleton, lastTime, time, firedEvents, alpha)
 		local frames = self.frames
 		if time < frames[0] then return end -- Time is before first frame.
 
@@ -421,16 +423,120 @@ function Animation.AttachmentTimeline.new ()
 		end
 
 		local attachmentName = self.attachmentNames[frameIndex]
-    local slot = skeleton.slotsByName[self.slotName]
-    if attachmentName then
-      if not slot.attachment then
-        slot:setAttachment(skeleton:getAttachment(self.slotName, attachmentName))
-      elseif slot.attachment.name ~= attachmentName then
-        slot:setAttachment(skeleton:getAttachment(self.slotName, attachmentName))
-      end
-    else
-      slot:setAttachment(nil)
-    end
+		local slot = skeleton.slotsByName[self.slotName]
+		if attachmentName then
+			if not slot.attachment then
+				slot:setAttachment(skeleton:getAttachment(self.slotName, attachmentName))
+			elseif slot.attachment.name ~= attachmentName then
+				slot:setAttachment(skeleton:getAttachment(self.slotName, attachmentName))
+			end
+		else
+			slot:setAttachment(nil)
+		end
+	end
+
+	return self
+end
+
+Animation.EventTimeline = {}
+function Animation.EventTimeline.new ()
+	local self = {
+		frames = {},
+		events = {}
+	}
+
+	function self:getDuration ()
+		return self.frames[#self.frames]
+	end
+
+	function self:getFrameCount ()
+		return #self.frames + 1
+	end
+
+	function self:setFrame (frameIndex, time, event)
+		self.frames[frameIndex] = time
+		self.events[frameIndex] = event
+	end
+
+	-- Fires events for frames > lastTime and <= time.
+	function self:apply (skeleton, lastTime, time, firedEvents, alpha)
+		if not firedEvents then return end
+
+		local frames = self.frames
+		local frameCount = #frames
+
+		if lastTime > time then -- Fire events after last time for looped animations.
+			self:apply(skeleton, lastTime, 999999, firedEvents, alpha)
+			lastTime = -1
+		elseif lastTime >= frames[frameCount - 1] then -- Last time is after last frame.
+			return
+		end
+		if time < frames[0] then return end -- Time is before first frame.
+
+		local frameIndex
+		if lastTime < frames[0] then
+			frameIndex = 0
+		else
+			frameIndex = binarySearch(frames, lastTime, 1)
+			local frame = frames[frameIndex]
+			while frameIndex > 0 do -- Fire multiple events with the same frame.
+				if frames[frameIndex - 1] ~= frame then break end
+				frameIndex = frameIndex - 1
+			end
+		end
+		local events = self.events
+		while frameIndex < frameCount and time >= frames[frameIndex] do
+			table.insert(firedEvents, events[frameIndex])
+			frameIndex = frameIndex + 1
+		end
+	end
+
+	return self
+end
+
+Animation.DrawOrderTimeline = {}
+function Animation.DrawOrderTimeline.new ()
+	local self = {
+		frames = {},
+		drawOrders = {}
+	}
+
+	function self:getDuration ()
+		return self.frames[#self.frames]
+	end
+
+	function self:getFrameCount ()
+		return #self.frames + 1
+	end
+
+	function self:setFrame (frameIndex, time, drawOrder)
+		self.frames[frameIndex] = time
+		self.drawOrders[frameIndex] = drawOrder
+	end
+
+	function self:apply (skeleton, lastTime, time, firedEvents, alpha)
+		local frames = self.frames
+		if time < frames[0] then return end -- Time is before first frame.
+
+		local frameIndex
+		if time >= frames[#frames] then -- Time is after last frame.
+			frameIndex = #frames
+		else
+			frameIndex = binarySearch(frames, time, 1) - 1
+		end
+
+		local drawOrder = skeleton.drawOrder
+		local slots = skeleton.slots
+		local drawOrderToSetupIndex = self.drawOrders[frameIndex]
+		if not drawOrderToSetupIndex then
+			for i,slot in ipairs(slots) do
+				drawOrder[i] = slots[i]
+			end
+		else
+			for i,setupIndex in ipairs(drawOrderToSetupIndex) do
+				drawOrder[i] = skeleton.slots[setupIndex]
+			end
+		end
 	end
 
 	return self

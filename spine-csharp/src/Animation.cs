@@ -1,34 +1,31 @@
 /******************************************************************************
- * Spine Runtime Software License - Version 1.0
+ * Spine Runtimes Software License
+ * Version 2.1
  * 
  * Copyright (c) 2013, Esoteric Software
  * All rights reserved.
  * 
- * Redistribution and use in source and binary forms in whole or in part, with
- * or without modification, are permitted provided that the following conditions
- * are met:
+ * You are granted a perpetual, non-exclusive, non-sublicensable and
+ * non-transferable license to install, execute and perform the Spine Runtimes
+ * Software (the "Software") solely for internal use. Without the written
+ * permission of Esoteric Software (typically granted by licensing Spine), you
+ * may not (a) modify, translate, adapt or otherwise create derivative works,
+ * improvements of the Software or develop new applications using the Software
+ * or (b) remove, delete, alter or obscure any trademarks or any copyright,
+ * trademark, patent or other intellectual property or proprietary rights
+ * notices on or in the Software, including any copy thereof. Redistributions
+ * in binary or source form must include this license and terms.
  * 
- * 1. A Spine Single User License or Spine Professional License must be
- *    purchased from Esoteric Software and the license must remain valid:
- *    http://esotericsoftware.com/
- * 2. Redistributions of source code must retain this license, which is the
- *    above copyright notice, this declaration of conditions and the following
- *    disclaimer.
- * 3. Redistributions in binary form must reproduce this license, which is the
- *    above copyright notice, this declaration of conditions and the following
- *    disclaimer, in the documentation and/or other materials provided with the
- *    distribution.
- * 
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
- * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
- * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * THIS SOFTWARE IS PROVIDED BY ESOTERIC SOFTWARE "AS IS" AND ANY EXPRESS OR
+ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO
+ * EVENT SHALL ESOTERIC SOFTARE BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+ * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
 using System;
@@ -52,14 +49,9 @@ namespace Spine {
 			this.duration = duration;
 		}
 
-		[Obsolete]
-		public void Apply (Skeleton skeleton, float time, bool loop) {
-			Apply(skeleton, time, time, loop, null);
-		}
-
 		/// <summary>Poses the skeleton at the specified time for this animation.</summary>
-		/// <param name="lastTime The last time the animation was applied. Can be equal to time if events shouldn't be fired.</param>
-		/// <param name="events Any triggered events are added. May be null if lastTime is known to not cause any events to trigger.</param>
+		/// <param name="lastTime">The last time the animation was applied.</param>
+		/// <param name="events">Any triggered events are added.</param>
 		public void Apply (Skeleton skeleton, float lastTime, float time, bool loop, List<Event> events) {
 			if (skeleton == null) throw new ArgumentNullException("skeleton cannot be null.");
 
@@ -73,15 +65,10 @@ namespace Spine {
 				timelines[i].Apply(skeleton, lastTime, time, events, 1);
 		}
 
-		[Obsolete] 
-		public void Mix (Skeleton skeleton, float time, bool loop, float alpha) {
-			Mix(skeleton, time, time, loop, null, alpha);
-		}
-
 		/// <summary>Poses the skeleton at the specified time for this animation mixed with the current pose.</summary>
-		/// <param name="lastTime The last time the animation was applied. Can be equal to time if events shouldn't be fired.</param>
-		/// <param name="events Any triggered events are added. May be null if lastTime is known to not cause any events to trigger.</param>
-		/// <param name="alpha The amount of this animation that affects the current pose.</param>
+		/// <param name="lastTime">The last time the animation was applied.</param>
+		/// <param name="events">Any triggered events are added.</param>
+		/// <param name="alpha">The amount of this animation that affects the current pose.</param>
 		public void Mix (Skeleton skeleton, float lastTime, float time, bool loop, List<Event> events, float alpha) {
 			if (skeleton == null) throw new ArgumentNullException("skeleton cannot be null.");
 
@@ -147,7 +134,7 @@ namespace Spine {
 		}
 
 		/// <summary>Sets the control handle positions for an interpolation bezier curve used to transition from this keyframe to the next.
-	   /// cx1 and cx2 are from 0 to 1, representing the percent of time between the two keyframes. cy1 and cy2 are the percent of
+		/// cx1 and cx2 are from 0 to 1, representing the percent of time between the two keyframes. cy1 and cy2 are the percent of
 		/// the difference between the keyframe's values.</summary>
 		public void SetCurve (int frameIndex, float cx1, float cy1, float cx2, float cy2) {
 			float subdiv_step = 1f / BEZIER_SEGMENTS;
@@ -374,31 +361,31 @@ namespace Spine {
 			float[] frames = this.frames;
 			if (time < frames[0]) return; // Time is before first frame.
 
-			Slot slot = skeleton.slots[slotIndex];
-
-			if (time >= frames[frames.Length - 5]) { // Time is after last frame.
+			float r, g, b, a;
+			if (time >= frames[frames.Length - 5]) {
+				// Time is after last frame.
 				int i = frames.Length - 1;
-				slot.r = frames[i - 3];
-				slot.g = frames[i - 2];
-				slot.b = frames[i - 1];
-				slot.a = frames[i];
-				return;
+				r = frames[i - 3];
+				g = frames[i - 2];
+				b = frames[i - 1];
+				a = frames[i];
+			} else {
+				// Interpolate between the last frame and the current frame.
+				int frameIndex = Animation.binarySearch(frames, time, 5);
+				float lastFrameR = frames[frameIndex - 4];
+				float lastFrameG = frames[frameIndex - 3];
+				float lastFrameB = frames[frameIndex - 2];
+				float lastFrameA = frames[frameIndex - 1];
+				float frameTime = frames[frameIndex];
+				float percent = 1 - (time - frameTime) / (frames[frameIndex + LAST_FRAME_TIME] - frameTime);
+				percent = GetCurvePercent(frameIndex / 5 - 1, percent < 0 ? 0 : (percent > 1 ? 1 : percent));
+
+				r = lastFrameR + (frames[frameIndex + FRAME_R] - lastFrameR) * percent;
+				g = lastFrameG + (frames[frameIndex + FRAME_G] - lastFrameG) * percent;
+				b = lastFrameB + (frames[frameIndex + FRAME_B] - lastFrameB) * percent;
+				a = lastFrameA + (frames[frameIndex + FRAME_A] - lastFrameA) * percent;
 			}
-
-			// Interpolate between the last frame and the current frame.
-			int frameIndex = Animation.binarySearch(frames, time, 5);
-			float lastFrameR = frames[frameIndex - 4];
-			float lastFrameG = frames[frameIndex - 3];
-			float lastFrameB = frames[frameIndex - 2];
-			float lastFrameA = frames[frameIndex - 1];
-			float frameTime = frames[frameIndex];
-			float percent = 1 - (time - frameTime) / (frames[frameIndex + LAST_FRAME_TIME] - frameTime);
-			percent = GetCurvePercent(frameIndex / 5 - 1, percent < 0 ? 0 : (percent > 1 ? 1 : percent));
-
-			float r = lastFrameR + (frames[frameIndex + FRAME_R] - lastFrameR) * percent;
-			float g = lastFrameG + (frames[frameIndex + FRAME_G] - lastFrameG) * percent;
-			float b = lastFrameB + (frames[frameIndex + FRAME_B] - lastFrameB) * percent;
-			float a = lastFrameA + (frames[frameIndex + FRAME_A] - lastFrameA) * percent;
+			Slot slot = skeleton.slots[slotIndex];
 			if (alpha < 1) {
 				slot.r += (r - slot.r) * alpha;
 				slot.g += (g - slot.g) * alpha;
@@ -469,33 +456,31 @@ namespace Spine {
 			events[frameIndex] = e;
 		}
 
+		/// <summary>Fires events for frames > lastTime and <= time.</summary>
 		public void Apply (Skeleton skeleton, float lastTime, float time, List<Event> firedEvents, float alpha) {
+			if (firedEvents == null) return;
 			float[] frames = this.frames;
+			int frameCount = frames.Length;
+
+			if (lastTime > time) { // Fire events after last time for looped animations.
+				Apply(skeleton, lastTime, int.MaxValue, firedEvents, alpha);
+				lastTime = -1f;
+			} else if (lastTime >= frames[frameCount - 1]) // Last time is after last frame.
+				return;
 			if (time < frames[0]) return; // Time is before first frame.
 
-			int frameCount = frames.Length;
-			if (lastTime >= frames[frameCount - 1]) return; // Last time is after last frame.
-
-			if (lastTime > time) {
-				// Fire events after last time for looped animations.
-				Apply(skeleton, lastTime, int.MaxValue, firedEvents, alpha);
-				lastTime = 0;
-			}
-
 			int frameIndex;
-			if (frameCount == 1)
+			if (lastTime < frames[0])
 				frameIndex = 0;
 			else {
 				frameIndex = Animation.binarySearch(frames, lastTime, 1);
 				float frame = frames[frameIndex];
-				while (frameIndex > 0) {
-					float lastFrame = frames[frameIndex - 1];
-					// Fire multiple events with the same frame and events that occurred at lastTime.
-					if (lastFrame != frame && lastFrame != lastTime) break;
+				while (frameIndex > 0) { // Fire multiple events with the same frame.
+					if (frames[frameIndex - 1] != frame) break;
 					frameIndex--;
 				}
 			}
-			for (; frameIndex < frameCount && time > frames[frameIndex]; frameIndex++)
+			for (; frameIndex < frameCount && time >= frames[frameIndex]; frameIndex++)
 				firedEvents.Add(events[frameIndex]);
 		}
 	}
@@ -539,6 +524,83 @@ namespace Spine {
 			} else {
 				for (int i = 0, n = drawOrderToSetupIndex.Length; i < n; i++)
 					drawOrder[i] = slots[drawOrderToSetupIndex[i]];
+			}
+		}
+	}
+
+	public class FFDTimeline : CurveTimeline {
+		internal int slotIndex;
+		internal float[] frames;
+		private float[][] frameVertices;
+		internal Attachment attachment;
+
+		public int SlotIndex { get { return slotIndex; } set { slotIndex = value; } }
+		public float[] Frames { get { return frames; } set { frames = value; } } // time, ...
+		public float[][] Vertices { get { return frameVertices; } set { frameVertices = value; } }
+		public Attachment Attachment { get { return attachment; } set { attachment = value; } }
+
+		public FFDTimeline (int frameCount)
+			: base(frameCount) {
+			frames = new float[frameCount];
+			frameVertices = new float[frameCount][];
+		}
+
+		/// <summary>Sets the time and value of the specified keyframe.</summary>
+		public void setFrame (int frameIndex, float time, float[] vertices) {
+			frames[frameIndex] = time;
+			frameVertices[frameIndex] = vertices;
+		}
+
+		override public void Apply (Skeleton skeleton, float lastTime, float time, List<Event> firedEvents, float alpha) {
+			Slot slot = skeleton.slots[slotIndex];
+			if (slot.attachment != attachment) return;
+
+			float[] frames = this.frames;
+			if (time < frames[0]) {
+				slot.attachmentVerticesCount = 0;
+				return; // Time is before first frame.
+			}
+
+			float[][] frameVertices = this.frameVertices;
+			int vertexCount = frameVertices[0].Length;
+
+			float[] vertices = slot.attachmentVertices;
+			if (vertices.Length != vertexCount) alpha = 1;
+			if (vertices.Length < vertexCount) {
+				vertices = new float[vertexCount];
+				slot.attachmentVertices = vertices;
+			}
+			slot.attachmentVerticesCount = vertexCount;
+
+			if (time >= frames[frames.Length - 1]) { // Time is after last frame.
+				float[] lastVertices = frameVertices[frames.Length - 1];
+				if (alpha < 1) {
+					for (int i = 0; i < vertexCount; i++)
+						vertices[i] += (lastVertices[i] - vertices[i]) * alpha;
+				} else
+					Array.Copy(lastVertices, 0, vertices, 0, vertexCount);
+				return;
+			}
+
+			// Interpolate between the previous frame and the current frame.
+			int frameIndex = Animation.binarySearch(frames, time, 1);
+			float frameTime = frames[frameIndex];
+			float percent = 1 - (time - frameTime) / (frames[frameIndex - 1] - frameTime);
+			percent = GetCurvePercent(frameIndex - 1, percent < 0 ? 0 : (percent > 1 ? 1 : percent));
+
+			float[] prevVertices = frameVertices[frameIndex - 1];
+			float[] nextVertices = frameVertices[frameIndex];
+
+			if (alpha < 1) {
+				for (int i = 0; i < vertexCount; i++) {
+					float prev = prevVertices[i];
+					vertices[i] += (prev + (nextVertices[i] - prev) * percent - vertices[i]) * alpha;
+				}
+			} else {
+				for (int i = 0; i < vertexCount; i++) {
+					float prev = prevVertices[i];
+					vertices[i] = prev + (nextVertices[i] - prev) * percent;
+				}
 			}
 		}
 	}

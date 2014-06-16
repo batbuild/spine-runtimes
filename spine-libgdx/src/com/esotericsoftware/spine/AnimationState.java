@@ -1,41 +1,38 @@
 /******************************************************************************
- * Spine Runtime Software License - Version 1.0
+ * Spine Runtimes Software License
+ * Version 2.1
  * 
  * Copyright (c) 2013, Esoteric Software
  * All rights reserved.
  * 
- * Redistribution and use in source and binary forms in whole or in part, with
- * or without modification, are permitted provided that the following conditions
- * are met:
+ * You are granted a perpetual, non-exclusive, non-sublicensable and
+ * non-transferable license to install, execute and perform the Spine Runtimes
+ * Software (the "Software") solely for internal use. Without the written
+ * permission of Esoteric Software (typically granted by licensing Spine), you
+ * may not (a) modify, translate, adapt or otherwise create derivative works,
+ * improvements of the Software or develop new applications using the Software
+ * or (b) remove, delete, alter or obscure any trademarks or any copyright,
+ * trademark, patent or other intellectual property or proprietary rights
+ * notices on or in the Software, including any copy thereof. Redistributions
+ * in binary or source form must include this license and terms.
  * 
- * 1. A Spine Single User License or Spine Professional License must be
- *    purchased from Esoteric Software and the license must remain valid:
- *    http://esotericsoftware.com/
- * 2. Redistributions of source code must retain this license, which is the
- *    above copyright notice, this declaration of conditions and the following
- *    disclaimer.
- * 3. Redistributions in binary form must reproduce this license, which is the
- *    above copyright notice, this declaration of conditions and the following
- *    disclaimer, in the documentation and/or other materials provided with the
- *    distribution.
- * 
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
- * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
- * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * THIS SOFTWARE IS PROVIDED BY ESOTERIC SOFTWARE "AS IS" AND ANY EXPRESS OR
+ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO
+ * EVENT SHALL ESOTERIC SOFTARE BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+ * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
 package com.esotericsoftware.spine;
 
 import com.badlogic.gdx.utils.Array;
+import com.badlogic.gdx.utils.Pool;
 import com.badlogic.gdx.utils.Pool.Poolable;
-import com.badlogic.gdx.utils.Pools;
 
 /** Stores state for an animation and automatically mixes between animations. */
 public class AnimationState {
@@ -43,7 +40,13 @@ public class AnimationState {
 	private Array<TrackEntry> tracks = new Array();
 	private final Array<Event> events = new Array();
 	private final Array<AnimationStateListener> listeners = new Array();
-	private float timeScale;
+	private float timeScale = 1;
+
+	private Pool<TrackEntry> trackEntryPool = new Pool() {
+		protected Object newObject () {
+			return new TrackEntry();
+		}
+	};
 
 	public AnimationState (AnimationStateData data) {
 		if (data == null) throw new IllegalArgumentException("data cannot be null.");
@@ -51,34 +54,25 @@ public class AnimationState {
 	}
 
 	public void update (float delta) {
-		for (int i = 0, n = tracks.size; i < n; i++) {
+		delta *= timeScale;
+		for (int i = 0; i < tracks.size; i++) {
 			TrackEntry current = tracks.get(i);
 			if (current == null) continue;
 
-			delta *= timeScale * current.timeScale;
-			float time = current.time + delta;
-			float endTime = current.endTime;
-
-			current.time = time;
+			current.time += delta * current.timeScale;
 			if (current.previous != null) {
-				current.previous.time += delta;
-				current.mixTime += delta;
-			}
-
-			// Check if completed the animation or a loop iteration.
-			if (current.loop ? (current.lastTime % endTime > time % endTime) : (current.lastTime < endTime && time >= endTime)) {
-				int count = (int)(time / endTime);
-				if (current.listener != null) current.listener.complete(i, count);
-				for (int ii = 0, nn = listeners.size; ii < nn; ii++)
-					listeners.get(ii).complete(i, count);
+				float previousDelta = delta * current.previous.timeScale;
+				current.previous.time += previousDelta;
+				current.mixTime += previousDelta;
 			}
 
 			TrackEntry next = current.next;
-			if (next != null && time >= next.delay) {
-				if (next.animation != null)
-					setCurrent(i, next);
-				else
-					clear(i);
+			if (next != null) {
+				next.time = current.lastTime - next.delay;
+				if (next.time >= 0) setCurrent(i, next);
+			} else {
+				// End non-looping animation when it reaches its end time and there is no next entry.
+				if (!current.loop && current.lastTime >= current.endTime) clearTrack(i);
 			}
 		}
 	}
@@ -87,24 +81,36 @@ public class AnimationState {
 		Array<Event> events = this.events;
 		int listenerCount = listeners.size;
 
-		for (int i = 0, n = tracks.size; i < n; i++) {
+		for (int i = 0; i < tracks.size; i++) {
 			TrackEntry current = tracks.get(i);
 			if (current == null) continue;
 
 			events.size = 0;
 
+			float time = current.time;
+			float lastTime = current.lastTime;
+			float endTime = current.endTime;
+			boolean loop = current.loop;
+			if (!loop && time > endTime) time = endTime;
+
 			TrackEntry previous = current.previous;
-			if (previous == null)
-				current.animation.apply(skeleton, current.lastTime, current.time, current.loop, events);
-			else {
-				previous.animation.apply(skeleton, Integer.MAX_VALUE, previous.time, previous.loop, null);
-				float alpha = current.mixTime / current.mixDuration;
+			if (previous == null) {
+				if (current.mix == 1)
+					current.animation.apply(skeleton, lastTime, time, loop, events);
+				else
+					current.animation.mix(skeleton, lastTime, time, loop, events, current.mix);
+			} else {
+				float previousTime = previous.time;
+				if (!previous.loop && previousTime > previous.endTime) previousTime = previous.endTime;
+				previous.animation.apply(skeleton, previousTime, previousTime, previous.loop, null);
+
+				float alpha = current.mixTime / current.mixDuration * current.mix;
 				if (alpha >= 1) {
 					alpha = 1;
-					Pools.free(previous);
+					trackEntryPool.free(previous);
 					current.previous = null;
 				}
-				current.animation.mix(skeleton, current.lastTime, current.time, current.loop, events, alpha);
+				current.animation.mix(skeleton, lastTime, time, loop, events, alpha);
 			}
 
 			for (int ii = 0, nn = events.size; ii < nn; ii++) {
@@ -114,17 +120,25 @@ public class AnimationState {
 					listeners.get(iii).event(i, event);
 			}
 
+			// Check if completed the animation or a loop iteration.
+			if (loop ? (lastTime % endTime > time % endTime) : (lastTime < endTime && time >= endTime)) {
+				int count = (int)(time / endTime);
+				if (current.listener != null) current.listener.complete(i, count);
+				for (int ii = 0, nn = listeners.size; ii < nn; ii++)
+					listeners.get(ii).complete(i, count);
+			}
+
 			current.lastTime = current.time;
 		}
 	}
 
-	public void clear () {
+	public void clearTracks () {
 		for (int i = 0, n = tracks.size; i < n; i++)
-			clear(i);
+			clearTrack(i);
 		tracks.clear();
 	}
 
-	public void clear (int trackIndex) {
+	public void clearTrack (int trackIndex) {
 		if (trackIndex >= tracks.size) return;
 		TrackEntry current = tracks.get(trackIndex);
 		if (current == null) return;
@@ -134,14 +148,15 @@ public class AnimationState {
 			listeners.get(i).end(trackIndex);
 
 		tracks.set(trackIndex, null);
+
 		freeAll(current);
-		if (current.previous != null) Pools.free(current.previous);
+		if (current.previous != null) trackEntryPool.free(current.previous);
 	}
 
 	private void freeAll (TrackEntry entry) {
 		while (entry != null) {
 			TrackEntry next = entry.next;
-			Pools.free(entry);
+			trackEntryPool.free(entry);
 			entry = next;
 		}
 	}
@@ -156,10 +171,8 @@ public class AnimationState {
 	private void setCurrent (int index, TrackEntry entry) {
 		TrackEntry current = expandToIndex(index);
 		if (current != null) {
-			if (current.previous != null) {
-				Pools.free(current.previous);
-				current.previous = null;
-			}
+			TrackEntry previous = current.previous;
+			current.previous = null;
 
 			if (current.listener != null) current.listener.end(index);
 			for (int i = 0, n = listeners.size; i < n; i++)
@@ -168,9 +181,16 @@ public class AnimationState {
 			entry.mixDuration = data.getMix(current.animation, entry.animation);
 			if (entry.mixDuration > 0) {
 				entry.mixTime = 0;
-				entry.previous = current;
+				// If a mix is in progress, mix from the closest animation.
+				if (previous != null && current.mixTime / current.mixDuration < 0.5f) {
+					entry.previous = previous;
+					previous = current;
+				} else
+					entry.previous = current;
 			} else
-				Pools.free(current);
+				trackEntryPool.free(current);
+
+			if (previous != null) trackEntryPool.free(previous);
 		}
 
 		tracks.set(index, entry);
@@ -192,10 +212,9 @@ public class AnimationState {
 		TrackEntry current = expandToIndex(trackIndex);
 		if (current != null) freeAll(current.next);
 
-		TrackEntry entry = Pools.obtain(TrackEntry.class);
+		TrackEntry entry = trackEntryPool.obtain();
 		entry.animation = animation;
 		entry.loop = loop;
-		entry.time = 0;
 		entry.endTime = animation.getDuration();
 		setCurrent(trackIndex, entry);
 		return entry;
@@ -209,14 +228,12 @@ public class AnimationState {
 	}
 
 	/** Adds an animation to be played delay seconds after the current or last queued animation.
-	 * @param animation May be null to queue clearing the AnimationState.
 	 * @param delay May be <= 0 to use duration of previous animation minus any mix duration plus the negative delay. */
 	public TrackEntry addAnimation (int trackIndex, Animation animation, boolean loop, float delay) {
-		TrackEntry entry = Pools.obtain(TrackEntry.class);
+		TrackEntry entry = trackEntryPool.obtain();
 		entry.animation = animation;
 		entry.loop = loop;
-		entry.time = 0;
-		entry.endTime = animation != null ? animation.getDuration() : 0;
+		entry.endTime = animation.getDuration();
 
 		TrackEntry last = expandToIndex(trackIndex);
 		if (last != null) {
@@ -227,10 +244,9 @@ public class AnimationState {
 			tracks.set(trackIndex, entry);
 
 		if (delay <= 0) {
-			if (last != null) {
-				delay += last.endTime;
-				if (animation != null) delay -= data.getMix(last.animation, animation);
-			} else
+			if (last != null)
+				delay += last.endTime - data.getMix(last.animation, animation);
+			else
 				delay = 0;
 		}
 		entry.delay = delay;
@@ -267,6 +283,11 @@ public class AnimationState {
 		return data;
 	}
 
+	/** Returns the list of tracks that have animations, which may contain nulls. */
+	public Array<TrackEntry> getTracks () {
+		return tracks;
+	}
+
 	public String toString () {
 		StringBuilder buffer = new StringBuilder(64);
 		for (int i = 0, n = tracks.size; i < n; i++) {
@@ -286,12 +307,16 @@ public class AnimationState {
 		float delay, time, lastTime, endTime, timeScale = 1;
 		float mixTime, mixDuration;
 		AnimationStateListener listener;
+		float mix = 1;
 
 		public void reset () {
+			next = null;
+			previous = null;
 			animation = null;
 			listener = null;
-			next = null;
 			timeScale = 1;
+			lastTime = -1;
+			time = 0;
 		}
 
 		public Animation getAnimation () {
@@ -348,6 +373,14 @@ public class AnimationState {
 
 		public void setLastTime (float lastTime) {
 			this.lastTime = lastTime;
+		}
+
+		public float getMix () {
+			return mix;
+		}
+
+		public void setMix (float mix) {
+			this.mix = mix;
 		}
 
 		public float getTimeScale () {
