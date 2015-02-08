@@ -67,10 +67,12 @@
     <Compile Include="src\Bone.cs" />
     <Compile Include="src\BoneData.cs" />
     <Compile Include="src\AnimationState.cs" />
+    <Compile Include="src\BigEndianBinaryReader.cs" />
     <Compile Include="src\Event.cs" />
     <Compile Include="src\EventData.cs" />
     <Compile Include="src\Json.cs" />
     <Compile Include="src\Skeleton.cs" />
+    <Compile Include="src\SkeletonBinary.cs" />
     <Compile Include="src\SkeletonData.cs" />
     <Compile Include="src\SkeletonJson.cs" />
     <Compile Include="src\Skin.cs" />
