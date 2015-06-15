@@ -1,0 +1,20 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package>
+    <metadata>
+        <id>@project@</id>
+        <version>@build.number@</version>
+        <authors>@authors@</authors>
+        <owners>@authors@</owners>
+        <title>@project@</title>
+        <projectUrl>https://github.com/BatBuild/Flow</projectUrl>
+		<licenseUrl>https://github.com/batbuild/spine-runtimes/blob/android-port/LICENSE</licenseUrl>
+        <requireLicenseAcceptance>false</requireLicenseAcceptance>
+        <summary>@summary@</summary>
+         <tags>@tags@</tags>
+        <description>@description@</description>
+        <language>en-IE</language>
+    </metadata>    
+    <files>
+        <file src="..\bin\Release\spine-csharp.Android.dll" target="lib/MonoAndroid" />                
+    </files>
+</package>
